@@ -26,6 +26,14 @@ import org.json.JSONObject;
 import android.util.Base64;
 import android.util.Log;
 
+import javax.net.ssl.HttpsURLConnection;
+import javax.security.cert.CertificateException;
+import java.net.URL;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.cert.Certificate;
+import java.security.cert.CertificateEncodingException;
+
 abstract class CordovaHttpBase implements Runnable {
   protected static final String TAG = "Cordova-Plugin-HTTP";
 
@@ -133,12 +141,25 @@ abstract class CordovaHttpBase implements Runnable {
     request.followRedirects(this.followRedirects);
     request.connectTimeout(this.connectTimeout);
     request.readTimeout(this.readTimeout);
+    request.acceptCharset("UTF-8");
     request.uncompress(true);
 
     if (this.tlsConfiguration.getHostnameVerifier() != null) {
       request.setHostnameVerifier(this.tlsConfiguration.getHostnameVerifier());
     }
-
+    try {
+        String c1 = getCertificateFromURL(this.url);
+        String c2 = this.tlsConfiguration.getCurrentCertificate();
+        boolean verifyCrt = c1.equals(c2);
+        Log.d(TAG+"C1 ", c1);
+        Log.d(TAG+"C2 ", c2);
+        Log.i(TAG+"COD101", Boolean.toString(verifyCrt));
+        if(!verifyCrt){
+            throw new IOException();
+        }
+    } catch (Exception e) {
+        Log.e(TAG, "COD102", e);
+    }
     request.setSSLSocketFactory(this.tlsConfiguration.getTLSSocketFactory());
 
     // setup content type before applying headers, so user can override it
@@ -146,6 +167,17 @@ abstract class CordovaHttpBase implements Runnable {
 
     request.headers(JsonUtils.getStringMap(this.headers));
   }
+
+     private String getCertificateFromURL(String httpsURL) throws IOException, NoSuchAlgorithmException, CertificateException, CertificateEncodingException {
+
+        final HttpsURLConnection con = (HttpsURLConnection) new URL(httpsURL).openConnection();
+        con.setConnectTimeout(5000);
+        con.connect();
+        final Certificate cert = con.getServerCertificates()[0];
+        final MessageDigest md = MessageDigest.getInstance("SHA256");
+        md.update(cert.getEncoded());
+        return TLSConfiguration.dumpHex(md.digest());
+     }
 
   protected void setContentType(HttpRequest request) {
     if ("json".equals(this.serializer)) {

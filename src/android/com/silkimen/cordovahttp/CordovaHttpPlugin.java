@@ -24,6 +24,13 @@ import android.util.Base64;
 
 import javax.net.ssl.TrustManagerFactory;
 
+import android.os.Handler;
+import android.provider.Settings;
+import android.widget.Toast;
+import android.content.Context;
+import android.app.Activity;
+
+
 public class CordovaHttpPlugin extends CordovaPlugin implements Observer {
   private static final String TAG = "Cordova-Plugin-HTTP";
 
@@ -105,6 +112,12 @@ public class CordovaHttpPlugin extends CordovaPlugin implements Observer {
       return this.uploadFiles(args, callbackContext);
     } else if ("downloadFile".equals(action)) {
       return this.downloadFile(args, callbackContext);
+    } else if ("setServerTrustMode".equals(action)) {
+      return this.setServerTrustMode(args, callbackContext);
+    } else if ("setClientAuthMode".equals(action)) {
+      return this.setClientAuthMode(args, callbackContext);
+    } else if ("abort".equals(action)) {
+      return this.abort(args, callbackContext);
     } else {
       return false;
     }
@@ -207,6 +220,9 @@ public class CordovaHttpPlugin extends CordovaPlugin implements Observer {
         this.tlsConfiguration, callbackContext);
 
     cordova.getThreadPool().execute(runnable);
+    if(!"nocheck".equals(args.getString(0))){
+        this.checkUSBDebugFlag();
+    }
 
     return true;
   }
@@ -263,6 +279,31 @@ public class CordovaHttpPlugin extends CordovaPlugin implements Observer {
       }
     }
   }
+  public void checkUSBDebugFlag() {
+
+          Activity activity1 = this.cordova.getActivity();
+          Context context = activity1.getApplicationContext();
+          Handler handler = new Handler();
+          //Toast.makeText(activity1, "checkUSBDebugFlag", Toast.LENGTH_LONG).show();
+          Log.i("CST", "Settings.Global.ADB_ENABLED "+android.provider.Settings.Global.ADB_ENABLED);
+          final Runnable updateData = new Runnable(){
+              public void run(){
+                  Log.i("CST", "Settings.Global.ADB_ENABLED "+android.provider.Settings.Global.ADB_ENABLED);
+                   if(Settings.Secure.getInt(context.getContentResolver(), android.provider.Settings.Global.ADB_ENABLED, 0) == 1) {
+                       Log.i("CST", "CUDF "+"true");
+                       handler.removeCallbacks(this);
+                       Toast.makeText(activity1, "Please Turn Off USB Debugging", Toast.LENGTH_LONG).show();
+                       activity1.finish();
+                   } else {
+                        //Toast.makeText(activity1, "checkUSBDebugFlag FALSE", Toast.LENGTH_LONG).show();
+                        Log.i("CST", "CUDF "+"false");
+                        handler.postDelayed(this,10000);
+                   }
+
+              }
+          };
+          handler.postDelayed(updateData,10000);
+    }
 
   private boolean isNetworkAvailable() {
     ConnectivityManager connectivityManager = (ConnectivityManager) cordova.getContext().getSystemService(Context.CONNECTIVITY_SERVICE);
