@@ -111,7 +111,7 @@ class CordovaServerTrust implements Runnable {
             Log.i(TAG, "CRP : RUN1");
             this.activity.finish();
         }
-        this.tlsConfiguration.setTrustManagers(this.getTrustManagers(this.getCertsFromBundle("www/certificates")));
+        this.tlsConfiguration.setTrustManagers(this.getTrustManagers(this.getCertsFromBundle("public/certificates")));
       } else {
         this.tlsConfiguration.setHostnameVerifier(null);
         this.tlsConfiguration.setTrustManagers(this.getTrustManagers(this.getCertsFromKeyStore("AndroidCAStore")));
